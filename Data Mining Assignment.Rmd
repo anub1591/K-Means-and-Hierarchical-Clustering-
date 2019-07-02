@@ -1,0 +1,139 @@
+---
+title: "Data Mining"
+author: "Anubhav Rastogi"
+date: "2/10/2019"
+output: html_document
+---
+
+Data Mining is the process of discovering patterns in the large data sets and finding the correlations among them in order to predict the outcomes. Data Mining can be performed through various techniques such as Classification, Regression, Prediction, Pattern Tracking etc. In this assignment, the data mining technique which is opted is Clustering Analysis. In order to perform Clustering Analysis, the Cars Sales dataset has been opted. This dataset contains 157 entries along with 15 column variables. The dataset contains information about the different car models manufactured by different companies. The dataset contains information such as sales, prices, resale value, engine size, wheelbase, length, width along with the launch date of the car models. The URL of the dataset is https://www.kaggle.com/hsinha53/car-sales/version/1#Car_sales.csv
+
+
+
+### Code
+The first step is to read the CSV file of Car Sales dataset and convert the Factor variable into numeric variable 
+```{r}
+# Read CSV File
+mydata = read.csv("Car_sales.csv")
+
+# Converting factor variable into numeric variable
+mydata[, c(4,6:14)] <- sapply(mydata[, c(4,6:14)], as.numeric)
+```
+
+
+
+##### Scatter Plots
+Scatter Plots are used to represent the relationship between two variables. Here, two scatter plots have been made. The first Scatter Plot represents the relationship between the Sales and the Prices of the cars. A fit line has been added to findout the trend. One can also see the outliers present in the dataset.
+```{r}
+# Scatter Plots
+plot(Price.in.thousands ~ Sales.in.thousands, mydata, xlab="Sales", ylab="Prices")
+abline(lm(Price.in.thousands ~ Sales.in.thousands, mydata), col="red")
+```
+
+The second scatter plot shows the relationship between the sales and the resale value of car after 4 years. A trendline has been plotted in this scatter plot too. 
+```{r}
+plot(X4.year.resale.value ~ Sales.in.thousands, mydata, xlab="Sales", ylab="Resale Value")
+abline(lm(X4.year.resale.value ~ Sales.in.thousands, mydata), col="red")
+```
+
+
+
+##### Normalization
+Data Normalization is one of the important processes and involves an organization of database by removing the redundant data. In order to improve the data integrity, it is important to remove the redundant data through the process of normalization. In the present dataset, we have removed the factor variable columns so that cluster analysis can be performed with the numeric variables. The normalization is done by subtracting the mean and dividing it by the standard deviation.
+```{r}
+# Normalization
+newdata = mydata[, -c(1,2,5,15)]
+m <- apply(newdata, 2, mean)
+s <- apply(newdata, 2, sd)
+newdata <- scale(newdata, m, s)
+```
+
+
+
+##### Euclidean distance
+In order to find out the distance between the objects, this technique is applied. This technique also highlights whether there exists any dissimilarity between the objects or not.
+```{r}
+# Calculating Euclidean distance
+distance <- dist(newdata)
+print(distance, digits=2)
+```
+
+
+
+##### Hierarchical Clustering
+It involves putting similar objects in groups which are known as clusters. The object within each group or cluster is similar but each cluster is distinct from other clusters. In the present dataset, Cluster Dendrogram is created to perform the Hierarchical Clustering. In this, each car model is treated as a separate cluster and then is merged with the closest and similar cluster. This process is continued till all the clusters are merged together to form a single big cluster. So, at height 12, all the clusters are merged together to form a single big cluster.
+```{r}
+# Cluster Dendrogram with Complete Linkage
+hc.c <- hclust(distance)
+plot(hc.c, labels=mydata$Model, cex=0.3, hang = -1)
+```
+
+Once again, a cluster dendrogram has been made but this time the method of linkage is average. Since the method is different, the shape of this dendrogram will also be different from the previous one.
+```{r}
+# Cluster Dendrogram with Average Linkage
+hc.a <- hclust(distance, method = "average")
+plot(hc.a, labels=mydata$Model, cex=0.3, hang = -1)
+```
+
+
+
+##### Cluster Membership
+In order to understand the membership information, we have made 4 clusters based on Complete Linkage as well as Average Linkage. A comparative analysis has been made by formulating the table. As per the table, one can see that there are 46 members in cluster 1, 67 in cluster 2, 43 in cluster 3 and just 1 member in cluster 4 and it is same for both Complete as well as Average Linkages. Thus, there is a good match of both the methods in terms of members(i.e. car models) as cluster formation is behaving in a similar manner from both the methods.
+```{r}
+# Cluster Membership
+member.c <- cutree(hc.c, 4)
+member.a <- cutree(hc.c, 4)
+table(member.c, member.a)
+```
+
+
+
+##### Cluster Means
+In order to calculate the average values of each variable in all 4 clusters, the following code has been used in order to characterize the values. It can be interpreted that variables such as Sales, Engine Size, Curb Weight, Fuel Capacity have a major impact on deciding the cluster membership as there is a huge variation in the cluster values of these variables. Here, the cluster means is performed on the normalized values of Complete Linkage. It can be further analyzed that the model in cluster 4 have huge sales as compared to the models in cluster 1 and 2 as they have below average sales.
+```{r}
+# Cluster Means
+aggregate(newdata, list(member.c), mean)
+```
+
+
+
+##### Silhouette Plot
+In order to check the consistency within the clusters, silhouette clustering is used to highlight how well the object is matched in its own cluster. Therefore, in the present dataset, cluster visualization is done through a Silhouette Plot where the hierarchical cluster is using the Complete Linkage method along with the cutree function. The Silhouette width will be lower if the cluster formation is poor. Also, the presence of outlier can be seen if there are negative Silhouette values. Thus, it can be said that there are many outliers present in the current dataset.
+```{r}
+# Silhouette Plot
+library(cluster)
+plot(silhouette(cutree(hc.c,4), distance))
+```
+
+
+
+##### Scree Plot
+It is a kind of plot which is created to highlight the variance in the data set. It is a line plot which represents the Principal Component in the analysis and requires calculation of within groups sum of squares. In the scree plot, it can be seen that the drop within the clusters is high in the beginning and then it keeps on reducing implying that the number of clusters in the present dataset should be limited to 4 or 5 and not more than that. 
+```{r}
+# Scree Plot
+wss <- (nrow(newdata)-1)*sum(apply(newdata,2,var))
+for (i in 2:156) wss[i] <- sum(kmeans(newdata, centers=i)$withinss)
+plot(1:156, wss, type="b", xlab="Number of Clusters", ylab="Within group SS")
+```
+
+
+
+##### K-Means Clustering
+This type of clustering is one of the simplest techniques for performing clustering analysis. It is a non-hierarchical clustering technique where data is classified into a set of k groups. In order to perform this type of clustering, kmeans function is used to classify the normalized dataset into 4 groups. It can be seen that there are 4 clusters comprising the different number of members. Further, it gives the cluster means which represents the values of each variable in all the clusters. It then reflects the clustering vector telling about the clustering membership followed by within group sum of squares. It can further be interpreted that the members of cluster having lowest within group sum of squares (lowest variability) are close to each other in terms of distance. It further highlights various components which are available such as cluster, centers, within group sum of squares, etc. A scatter plot depicting prices and sales of car models have been made wherein each color depicts the members of a particular cluster. Cluster 1 is represented by black color dots, cluster 2 by red dots, cluster 3 by green dots and cluster 4 by blue dots.
+```{r}
+# K-Means Clustering
+kc <- kmeans(newdata, 4)
+plot(Price.in.thousands ~ Sales.in.thousands, mydata, col=kc$cluster)
+```
+
+Thus, on the basis of the analysis, it can be concluded that data mining is one of the essential processes of organizing the data based on patterns. The process of data mining can be done with the help of various techniques, one of them being clustering analysis. Clustering analysis can be done in two ways - Hierarchical clustering and non-hierarchical clustering (i.e. K-Means Clustering). In the present assignment, both the techniques of clustering analysis have been performed. Cluster Dendrograms with Complete Linkage and Average Linkage have been plotted to perform the Hierarchical Clustering. A comparison of Cluster Membership based on Complete Linkage and Average Linkage has been made. Although there exists a difference in the Dendrograms because of the selection of different methods, however, there is no difference with respect to the number of members highlighting the similarity in the cluster formation by both the methods. K-Means clustering has also been performed to find out the difference in terms of group size, cluster means, and cluster membership. Apart from these, the scree plot and silhouette plot have also been made to carry out the data mining process on the selected dataset.
+
+
+**References:**
+  1. Bharatendra Rai. (2015, December 3). Introduction to Cluster Analysis with R - an Example. Retrieved from https://www.youtube.com/watch?v=5eDqRysaico
+  2. Harshit Sinha. Car_sales. Retrieved from https://www.kaggle.com/hsinha53/car-sales/version/1#Car_sales.csv
+  3. Deborah J. Rumsey. How to interpret a Regression Line. Retrieved from https://www.dummies.com/education/math/statistics/how-to-interpret-a-regression-line/
+  4. Statistics How To. Regression Analysis: Step by Step Articles, Videos, Simple Definitions. Retrieved from https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/regression-analysis/
+  5. Fazal Rehman Shamil. (2018, December 9). Euclidean distance in data mining. Retrieved from https://t4tutorials.com/euclidean-distance-in-data-mining/
+  6. Stack Exchange. Purpose of dendrogram and hierarchical clustering. Retrieved from https://stats.stackexchange.com/questions/233131/purpose-of-dendrogram-and-hierarchical-clustering
+  7. UC Business Analytics R Programming Guide. K-means Cluster Analysis. Retrieved from https://uc-r.github.io/kmeans_clustering
+
